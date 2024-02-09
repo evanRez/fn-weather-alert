@@ -31,7 +31,7 @@ namespace be_weatheralert
             if (myTimer.ScheduleStatus is not null)
             {
                 _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
-                var str = Environment.GetEnvironmentVariable("sqldb_connection");
+                var str = Environment.GetEnvironmentVariable("SqlConnectionString");
                 // List to store the retrieved data
                 List<string[]> resultList = new List<string[]>();
 
@@ -80,6 +80,8 @@ namespace be_weatheralert
 
         }
 
+        //https://learn.microsoft.com/en-us/azure/azure-functions/functions-scenario-database-table-cleanup?source=recommendations
+
         public void sendEmail(string recipientName, string recipientEmail)
         {
             _logger.LogInformation("Email method was called from Scheduled Alerts");
@@ -105,7 +107,8 @@ namespace be_weatheralert
                 client.Connect("smtp-relay.brevo.com", 587, false);  
                 // Note: only needed if the SMTP server requires authentication  
                 // Remove the password and put into azure keyvault or something
-                client.Authenticate("steveadler72@gmail.com", "08VQHTxmw5RMCnkY");  
+                var key = Environment.GetEnvironmentVariable("MailApiKey");
+                client.Authenticate("steveadler72@gmail.com", key);  
                 client.Send(message);  
                 client.Disconnect(true);
                 _logger.LogInformation("Successfully send our first email");
