@@ -5,6 +5,8 @@ VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "be-weatheralert", "be-weatheralert.csproj", "{6DF2575A-5426-420A-9163-F4298F5B1836}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cl-weatheralert", "..\cl-weatheralert\cl-weatheralert.csproj", "{DC20D1D7-04F7-4605-BDB0-5D1F09E6CC98}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{6DF2575A-5426-420A-9163-F4298F5B1836}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6DF2575A-5426-420A-9163-F4298F5B1836}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6DF2575A-5426-420A-9163-F4298F5B1836}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC20D1D7-04F7-4605-BDB0-5D1F09E6CC98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC20D1D7-04F7-4605-BDB0-5D1F09E6CC98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC20D1D7-04F7-4605-BDB0-5D1F09E6CC98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC20D1D7-04F7-4605-BDB0-5D1F09E6CC98}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

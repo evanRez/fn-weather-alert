@@ -1,15 +1,11 @@
 using System.Net;
 using System.Text.Json;
-using cl_weatheralert;
+using data_weatheralert;
 using MailKit.Net.Smtp;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 using MimeKit;
-using TimerTriggerAttribute = Microsoft.Azure.Functions.Worker.TimerTriggerAttribute;
 
 namespace be_weatheralert
 {
@@ -22,63 +18,63 @@ namespace be_weatheralert
             _logger = loggerFactory.CreateLogger<ScheduledAlert>();
         }
 
-        [Function("ScheduledAlertTrigger")]
-        public void AlertAtSix([TimerTrigger("0 0 6 * * *")] Microsoft.Azure.Functions.Worker.TimerInfo myTimer)
-        {
-            // "0 0 6 * * *" = 6am everyday
-            _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
+        // [Function("ScheduledAlertTrigger")]
+        // public void AlertAtSix([TimerTrigger("0 0 6 * * *")] Microsoft.Azure.Functions.Worker.TimerInfo myTimer)
+        // {
+        //     // "0 0 6 * * *" = 6am everyday
+        //     _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
             
-            if (myTimer.ScheduleStatus is not null)
-            {
-                _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
-                var str = Environment.GetEnvironmentVariable("SqlConnectionString");
-                // List to store the retrieved data
-                List<string[]> resultList = new List<string[]>();
+        //     if (myTimer.ScheduleStatus is not null)
+        //     {
+        //         _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
+        //         var str = Environment.GetEnvironmentVariable("SqlConnectionString");
+        //         // List to store the retrieved data
+        //         List<string[]> resultList = new List<string[]>();
 
 
-                using (SqlConnection conn = new SqlConnection(str))
-                {
-                    conn.Open();
-                    var text = "SELECT Email, Name from dbo.Users"
-                    + "WHERE TimerId = 6";
+        //         using (SqlConnection conn = new SqlConnection(str))
+        //         {
+        //             conn.Open();
+        //             var text = "SELECT Email, Name from dbo.Users"
+        //             + "WHERE TimerId = 6";
 
-                    using (SqlCommand cmd = new SqlCommand(text, conn))
-                    {
-                        using (SqlDataReader reader = cmd.ExecuteReader())
-                        {
-                            // Iterate through the result set
-                            while (reader.Read())
-                            {
-                                // Retrieve data from each row and store it in an array
-                                string[] rowData = new string[reader.FieldCount];
-                                for (int i = 0; i < reader.FieldCount; i++)
-                                {
-                                    rowData[i] = reader[i].ToString();
-                                }
+        //             using (SqlCommand cmd = new SqlCommand(text, conn))
+        //             {
+        //                 using (SqlDataReader reader = cmd.ExecuteReader())
+        //                 {
+        //                     // Iterate through the result set
+        //                     while (reader.Read())
+        //                     {
+        //                         // Retrieve data from each row and store it in an array
+        //                         string[] rowData = new string[reader.FieldCount];
+        //                         for (int i = 0; i < reader.FieldCount; i++)
+        //                         {
+        //                             rowData[i] = reader[i].ToString();
+        //                         }
 
-                                // Add the row data to the list
-                                resultList.Add(rowData);
-                            }
-                        }
+        //                         // Add the row data to the list
+        //                         resultList.Add(rowData);
+        //                     }
+        //                 }
 
-                    }
+        //             }
 
                     
-                }
+        //         }
 
-                // Display the retrieved data (optional)
-                foreach (var row in resultList)
-                {
-                    Console.WriteLine(string.Join(", ", row));
-                    var myEmail = row.ElementAt(0);
-                    var myName = row.ElementAt(1);
-                    sendEmail(myName, myEmail);
-                }
+        //         // Display the retrieved data (optional)
+        //         foreach (var row in resultList)
+        //         {
+        //             Console.WriteLine(string.Join(", ", row));
+        //             var myEmail = row.ElementAt(0);
+        //             var myName = row.ElementAt(1);
+        //             sendEmail(myName, myEmail);
+        //         }
                 
-            }
+        //     }
 
 
-        }
+        // }
 
         //https://learn.microsoft.com/en-us/azure/azure-functions/functions-scenario-database-table-cleanup?source=recommendations
 
@@ -132,24 +128,51 @@ namespace be_weatheralert
 
             var message = "Welcome to Azure Functions!";
 
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-            response.WriteString(message);
-
-            string requestBody = new StreamReader(req.Body).ReadToEnd();
-            var user = JsonSerializer.Deserialize<UserDTO>(requestBody);
-
-            return new OutputType()
+            try
             {
-                UserDTO = new UserDTO()
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
+                response.WriteString(message);
+
+                string requestBody = new StreamReader(req.Body).ReadToEnd();
+                _logger.LogInformation("Request Body" + requestBody);
+                var user = JsonSerializer.Deserialize<UserDTO>(requestBody);
+
+                var user2 = JsonSerializer.Serialize(user);
+                _logger.LogInformation("maybe its a serializer issue: " + user2);
+
+                var newlyCreatedUser = new UserDTO()
+                    {
+                        UserId = Guid.NewGuid(),
+                        Email = user?.Email ?? "example@test.com",
+                        TimeId = 6,
+                        Active = true,
+                        Name = user?.Name ?? "Tester"
+                    };
+
+                var serializedUser = JsonSerializer.Serialize(newlyCreatedUser);
+                _logger.LogInformation("This newley created user obj: " + serializedUser);
+
+                
+
+                return new OutputType()
                 {
-                    UserId = Guid.NewGuid(),
-                    Email = user?.Email ?? "example@test.com",
-                    TimeId = 6,
-                    Active = 1
-                },
-                HttpResponse = response
+                    UserDTO = newlyCreatedUser,
+                    HttpResponse = response
+                };
+            } catch (Exception err) 
+            {
+                Console.WriteLine(err.Message);
+                _logger.LogError(err.Message);
+            }
+
+            return new OutputType() 
+            {
+                UserDTO = new UserDTO(),
+                HttpResponse = req.CreateResponse(HttpStatusCode.BadRequest)
             };
+
+            
         }
 
         

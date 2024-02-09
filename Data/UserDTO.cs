@@ -1,15 +1,13 @@
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+namespace data_weatheralert;
 
 public class UserDTO 
 {
-    public Guid UserId;
-    public string Email;
+    public Guid UserId {get; set;}
+    public string Email {get; set;}
 
-    public string Name;
+    public string Name {get; set;}
 
-    public int TimeId;
+    public int TimeId {get; set;}
 
-    public int Active;
-
+    public bool Active {get; set;}
 }
