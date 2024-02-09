@@ -6,6 +6,8 @@ public class UserDTO
     public Guid UserId;
     public string Email;
 
+    public string Name;
+
     public int TimeId;
 
     public int Active;
