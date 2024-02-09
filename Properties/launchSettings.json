@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "be_weatheralert": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7033",
+      "launchBrowser": false
+    }
+  }
+}
