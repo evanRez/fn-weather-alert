@@ -13,14 +13,16 @@ namespace be_weatheralert
     public class ScheduledAlert
     {
         private readonly ILogger _logger;
+        private readonly HttpClient _client;
 
         public ScheduledAlert(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.CreateLogger<ScheduledAlert>();
+            _client = new HttpClient();
         }
 
         [Function("ScheduledAlertTrigger")]
-        public void AlertAtSix([TimerTrigger("0 0 6 * * *")] Microsoft.Azure.Functions.Worker.TimerInfo myTimer)
+        public async Task AlertAtSix([TimerTrigger("0 */5 * * * *")] Microsoft.Azure.Functions.Worker.TimerInfo myTimer)
         {
             // "0 0 6 * * *" = 6am everyday
             //0 */5 * * * * every 5 min
@@ -31,7 +33,7 @@ namespace be_weatheralert
             using (SqlConnection conn = new SqlConnection(str))
             {
                 SqlCommand command = new(
-                "SELECT Name, Email FROM dbo.Users;",
+                "SELECT Name, Email, Latitude, Longitude FROM dbo.Users;",
                 conn);
                 conn.Open();
 
@@ -43,7 +45,14 @@ namespace be_weatheralert
                     {
                         var name = reader.GetString(0);
                         var email = reader.GetString(1);
-                        sendEmail(name, email);
+                        var lat = reader.GetString(2);
+                        var lon = reader.GetString(3);
+                        if (await IsItGoingToRainToday(lat, lon))
+                        {
+                            sendEmail(name, email);
+                            _logger.LogInformation("Heck yes, get your umbrella");
+                        }
+                        
                     }
                 }
                 else
@@ -61,7 +70,7 @@ namespace be_weatheralert
             try 
             {
                 var message = new MimeMessage();
-                message.From.Add(new MailboxAddress("Weather Bud", "steveadler72@gmail.com"));  
+                message.From.Add(new MailboxAddress("Weather Boy", "steveadler72@gmail.com"));  
                 message.To.Add(new MailboxAddress(recipientName, recipientEmail));  
                 message.Subject = "Don't forget your umbrella!";  
 
@@ -90,7 +99,32 @@ namespace be_weatheralert
             {
                 _logger.LogError(err.Message);
             }
+        }
+
+
+        public async Task<bool> IsItGoingToRainToday(string latitude, string longitude)
+        {
+            var key = Environment.GetEnvironmentVariable("WeatherApiKey");
+
+            var urlString = $"http://api.openweathermap.org/data/2.5/forecast?lat={latitude}&lon={longitude}&cnt=6&appid={key}";
             
+            _logger.LogInformation("url string: " + urlString);
+            var responseBody = await _client.GetStringAsync(urlString);
+
+            _logger.LogInformation("Weather Data: " + responseBody);
+
+            var response = JsonSerializer.Deserialize<Root>(responseBody);
+
+            var rainBool = response?.list.Any(x => x.weather.Any(y => y.main.ToString().Contains("Rain")));
+
+            if (rainBool.HasValue && rainBool.Value == true)
+            {
+                _logger.LogInformation("Let it rain");
+                return true;
+            }
+            _logger.LogInformation("Its dry out there");
+            return false;
+
         }
 
         [Function("CommitToSix")]
@@ -121,7 +155,9 @@ namespace be_weatheralert
                         Email = user?.Email ?? "example@test.com",
                         TimeId = 6,
                         Active = true,
-                        Name = user?.Name ?? "Tester"
+                        Name = user?.Name ?? "Tester",
+                        Latitude = user.Latitude,
+                        Longitude = user.Longitude
                     };
 
                 var serializedUser = JsonSerializer.Serialize(newlyCreatedUser);

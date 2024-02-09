@@ -10,4 +10,7 @@ public class UserDTO
     public int TimeId {get; set;}
 
     public bool Active {get; set;}
+
+    public string Latitude {get; set;}
+    public string Longitude {get; set;}
 }
