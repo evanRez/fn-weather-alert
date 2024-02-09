@@ -4,6 +4,7 @@ using data_weatheralert;
 using MailKit.Net.Smtp;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 
@@ -18,65 +19,41 @@ namespace be_weatheralert
             _logger = loggerFactory.CreateLogger<ScheduledAlert>();
         }
 
-        // [Function("ScheduledAlertTrigger")]
-        // public void AlertAtSix([TimerTrigger("0 0 6 * * *")] Microsoft.Azure.Functions.Worker.TimerInfo myTimer)
-        // {
-        //     // "0 0 6 * * *" = 6am everyday
-        //     _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
+        [Function("ScheduledAlertTrigger")]
+        public void AlertAtSix([TimerTrigger("0 0 6 * * *")] Microsoft.Azure.Functions.Worker.TimerInfo myTimer)
+        {
+            // "0 0 6 * * *" = 6am everyday
+            //0 */5 * * * * every 5 min
+            _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
             
-        //     if (myTimer.ScheduleStatus is not null)
-        //     {
-        //         _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
-        //         var str = Environment.GetEnvironmentVariable("SqlConnectionString");
-        //         // List to store the retrieved data
-        //         List<string[]> resultList = new List<string[]>();
+            // Get the connection string from app settings and use it to create a connection.
+            var str = Environment.GetEnvironmentVariable("SqlConnectionString");
+            using (SqlConnection conn = new SqlConnection(str))
+            {
+                SqlCommand command = new(
+                "SELECT Name, Email FROM dbo.Users;",
+                conn);
+                conn.Open();
 
+                SqlDataReader reader = command.ExecuteReader();
 
-        //         using (SqlConnection conn = new SqlConnection(str))
-        //         {
-        //             conn.Open();
-        //             var text = "SELECT Email, Name from dbo.Users"
-        //             + "WHERE TimerId = 6";
+                if (reader.HasRows)
+                {
+                    while (reader.Read())
+                    {
+                        var name = reader.GetString(0);
+                        var email = reader.GetString(1);
+                        sendEmail(name, email);
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("No rows found.");
+                }
+                reader.Close();
+            }
+        }
 
-        //             using (SqlCommand cmd = new SqlCommand(text, conn))
-        //             {
-        //                 using (SqlDataReader reader = cmd.ExecuteReader())
-        //                 {
-        //                     // Iterate through the result set
-        //                     while (reader.Read())
-        //                     {
-        //                         // Retrieve data from each row and store it in an array
-        //                         string[] rowData = new string[reader.FieldCount];
-        //                         for (int i = 0; i < reader.FieldCount; i++)
-        //                         {
-        //                             rowData[i] = reader[i].ToString();
-        //                         }
-
-        //                         // Add the row data to the list
-        //                         resultList.Add(rowData);
-        //                     }
-        //                 }
-
-        //             }
-
-                    
-        //         }
-
-        //         // Display the retrieved data (optional)
-        //         foreach (var row in resultList)
-        //         {
-        //             Console.WriteLine(string.Join(", ", row));
-        //             var myEmail = row.ElementAt(0);
-        //             var myName = row.ElementAt(1);
-        //             sendEmail(myName, myEmail);
-        //         }
-                
-        //     }
-
-
-        // }
-
-        //https://learn.microsoft.com/en-us/azure/azure-functions/functions-scenario-database-table-cleanup?source=recommendations
 
         public void sendEmail(string recipientName, string recipientEmail)
         {
@@ -84,7 +61,7 @@ namespace be_weatheralert
             try 
             {
                 var message = new MimeMessage();
-                message.From.Add(new MailboxAddress("Steve Adler", "steveadler72@gmail.com"));  
+                message.From.Add(new MailboxAddress("Weather Bud", "steveadler72@gmail.com"));  
                 message.To.Add(new MailboxAddress(recipientName, recipientEmail));  
                 message.Subject = "Don't forget your umbrella!";  
 
@@ -138,9 +115,6 @@ namespace be_weatheralert
                 _logger.LogInformation("Request Body" + requestBody);
                 var user = JsonSerializer.Deserialize<UserDTO>(requestBody);
 
-                var user2 = JsonSerializer.Serialize(user);
-                _logger.LogInformation("maybe its a serializer issue: " + user2);
-
                 var newlyCreatedUser = new UserDTO()
                     {
                         UserId = Guid.NewGuid(),
@@ -153,16 +127,14 @@ namespace be_weatheralert
                 var serializedUser = JsonSerializer.Serialize(newlyCreatedUser);
                 _logger.LogInformation("This newley created user obj: " + serializedUser);
 
-                
-
                 return new OutputType()
                 {
                     UserDTO = newlyCreatedUser,
                     HttpResponse = response
                 };
+
             } catch (Exception err) 
             {
-                Console.WriteLine(err.Message);
                 _logger.LogError(err.Message);
             }
 
